@@ -1,15 +1,16 @@
 import pathlib
 import json
+import subprocess
+# this is https://github.com/nurse/nkf/tree/master/NKF.python3
+import nkf
 
 full = []
-
 for jf in pathlib.Path("hashes").glob("*.json"):
     txt = jf.read_text()
     full += json.loads(txt)
-
 print(len(full), "loaded!")
 
-def tja2mongo(id,text):
+def tja2mongo(x,text):
   title = None
   subtitle = None
   levels = ["easy", "normal", "hard", "oni", "ura"]
@@ -25,7 +26,7 @@ def tja2mongo(id,text):
       subtitle = line.split(":")[1].strip().lstrip("-")
     elif line.startswith("WAVE:"):
       wave = line.split(":")[1].strip()
-      music_type = os.path.splitext(wave)[1].lstrip(".")
+      music_type = wave.split('.')[-1]
     elif line.startswith("DEMOSTART:"):
       preview = float(line.split(":")[1].strip() or 0)
     elif line.startswith("COURSE:"):
@@ -71,6 +72,15 @@ def tja2mongo(id,text):
     "maker_id":None,
     "lyrics": False,
     "hash":"",
-    "id":id,
-    "order":id
+    "id":x,
+    "order":x
   }
+
+db = []
+for x,th,sh in [(1+i,*e) for i, e in enumerate(full)]:
+    tb = subprocess.run(['ipfs', 'cat', th], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+    tt = nkf.nkf('-w', tb).decode('utf-8')
+    item = tja2mongo(x,tt)
+    db += [item]
+    print(item["id"],'is',item["title"])
+pathlib.Path("db.json").write_text(json.dumps(db,indent=4))
