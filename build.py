@@ -77,10 +77,19 @@ def tja2mongo(x,text):
   }
 
 db = []
+song_dir = pathlib.Path("songs")
 for x,th,sh in [(1+i,*e) for i, e in enumerate(full)]:
     tb = subprocess.run(['ipfs', 'cat', th], stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
     tt = nkf.nkf('-w', tb).decode('utf-8')
     item = tja2mongo(x,tt)
     db += [item]
     print(item["id"],'is',item["title"])
+
+    tp = song_dir / str(item["id"]) / "main.tja"
+    sp = song_dir / str(item["id"]) / str("main." + item["music_type"])
+    tp.parent.mkdir(parents=True,exist_ok=True)
+    sp.parent.mkdir(parents=True,exist_ok=True)
+    subprocess.run(['ipfs', 'get', '-o',tp,th])
+    subprocess.run(['ipfs', 'get', '-o',sp,sh])
+    print(item["title"], "saved!")
 pathlib.Path("db.json").write_text(json.dumps(db,indent=4))
